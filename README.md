@@ -41,7 +41,7 @@ open(my $fh, '<:encoding(UTF-8)', $filename)
 
 # converting file into series commands
 my $separator = ',';
-my $unix_seconds = gmtime(time());
+my $unix_seconds = time();
 my $lineindex = 0;
 my $commands = "";
 
