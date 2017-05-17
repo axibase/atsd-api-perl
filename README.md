@@ -27,13 +27,7 @@ axi-01,api-q-4,0,120
 #!/usr/bin/perl
 use strict;
 use warnings FATAL => 'all';
-use warnings FATAL => 'all';
-use Date::Parse;
-use Time::Piece;
 use IO::Socket::INET;
-
-# auto-flush on socket
-$| = 1;
 
 my $num_args = $#ARGV + 1;
 if ($num_args != 3) {
@@ -47,7 +41,7 @@ open(my $fh, '<:encoding(UTF-8)', $filename)
 
 # converting file into series commands
 my $separator = ',';
-my $seriesdate = localtime(time())->strftime('%Y-%m-%dT%H:%M:%SZ');
+my $unix_seconds = gmtime(time());
 my $lineindex = 0;
 my $commands = "";
 
@@ -60,8 +54,8 @@ while (my $line = <$fh>) {
     chomp $line;
     my @row = split($separator, $line);
 
-    $commands = $commands . sprintf("series e:%s m:%s=%s t:test_status=%s d:%s\n",
-        $row[1], $row[2], $row[4], $row[3], $seriesdate);
+    $commands = $commands . sprintf("series e:%s m:test_duration=%s t:test_name=%s t:test_status=%s s:%s\n",
+        $row[0], $row[3], $row[1], $row[2], $unix_seconds);
     $lineindex++;
 }
 
@@ -91,12 +85,9 @@ perl series-uploader.pl localhost 8081 data.csv
 * Commands Sent
 
 ```ls
-series e:axi-01 m:api-q-1=32 t:test_status=0 d:2017-05-17T17:45:09Z
-series e:axi-01 m:api-q-2=2050 t:test_status=0 d:2017-05-17T17:45:09Z
-series e:axi-01 m:api-q-4=120 t:test_status=0 d:2017-05-17T17:45:09Z
-series e:axi-01 m:api-q-1=32 t:test_status=0 d:2017-05-17T17:45:09Z
-series e:axi-01 m:api-q-2=2050 t:test_status=0 d:2017-05-17T17:45:09Z
-series e:axi-01 m:api-q-4=120 t:test_status=0 d:2017-05-17T17:45:09Z
+series e:axi-01 m:test_duration=32 t:test_name=api-q-1 t:test_status=0 s:1495033767
+series e:axi-01 m:test_duration=2050 t:test_name=api-q-2 t:test_status=0 s:1495033767
+series e:axi-01 m:test_duration=120 t:test_name=api-q-4 t:test_status=0 s:1495033767
 ```
 
 
@@ -120,13 +111,9 @@ date,node,test_name,test_status,test_duration
 #!/usr/bin/perl
 use strict;
 use warnings FATAL => 'all';
-use warnings FATAL => 'all';
 use Date::Parse;
 use Time::Piece;
 use IO::Socket::INET;
-
-# auto-flush on socket
-$| = 1;
 
 my $num_args = $#ARGV + 1;
 if ($num_args != 3) {
@@ -152,11 +139,10 @@ while (my $line = <$fh>) {
     chomp $line;
     my @row = split($separator, $line);
 
-    my $seriestime = str2time($row[0]);
-    my $seriesdate = localtime($seriestime)->strftime('%Y-%m-%dT%H:%M:%SZ');
+    my $seriesdate = gmtime(str2time($row[0]))->strftime('%Y-%m-%dT%H:%M:%SZ');
 
-    $commands = $commands . sprintf("series e:%s m:%s=%s t:test_status=%s d:%s\n",
-        $row[1], $row[2], $row[4], $row[3], $seriesdate);
+    $commands = $commands . sprintf("series e:%s m:test_duration=%s t:test_name=%s t:test_status=%s d:%s\n",
+        $row[1], $row[4], $row[2], $row[3], $seriesdate);
     $lineindex++;
 }
 
@@ -186,12 +172,12 @@ perl series-uploader.pl localhost 8081 data.csv
 * Commands Sent
 
 ```ls
-series e:axi-01 m:api-q-1=32 t:test_status=0 d:2017-05-15T22:00:00Z
-series e:axi-01 m:api-q-2=2050 t:test_status=0 d:2017-05-15T22:00:00Z
-series e:axi-01 m:api-q-4=120 t:test_status=0 d:2017-05-15T22:00:00Z
-series e:axi-01 m:api-q-1=32 t:test_status=0 d:2017-05-15T22:00:00Z
-series e:axi-01 m:api-q-2=2050 t:test_status=0 d:2017-05-15T22:00:00Z
-series e:axi-01 m:api-q-4=120 t:test_status=0 d:2017-05-15T22:00:00Z
+series e:axi-01 m:test_duration=32 t:test_name=api-q-1 t:test_status=0 d:2017-05-15T19:00:00Z
+series e:axi-01 m:test_duration=2050 t:test_name=api-q-2 t:test_status=0 d:2017-05-15T19:00:00Z
+series e:axi-01 m:test_duration=120 t:test_name=api-q-4 t:test_status=0 d:2017-05-15T19:00:00Z
+series e:axi-01 m:test_duration=32 t:test_name=api-q-1 t:test_status=0 d:2017-05-15T19:00:00Z
+series e:axi-01 m:test_duration=2050 t:test_name=api-q-2 t:test_status=0 d:2017-05-15T19:00:00Z
+series e:axi-01 m:test_duration=120 t:test_name=api-q-4 t:test_status=0 d:2017-05-15T19:00:00Z
 ```
 
 ### Sending Data using Data API
@@ -233,11 +219,10 @@ while (my $line = <$fh>) {
     chomp $line;
     my @row = split($separator, $line);
 
-    my $seriestime = str2time($row[0]);
-    my $seriesdate = localtime($seriestime)->strftime('%Y-%m-%dT%H:%M:%SZ');
+    my $seriesdate = gmtime(str2time($row[0]))->strftime('%Y-%m-%dT%H:%M:%SZ');
 
-    $commands = $commands . sprintf("series e:%s m:%s=%s t:test_status=%s d:%s\n",
-    $row[1], $row[2], $row[4], $row[3], $seriesdate);
+    $commands = $commands . sprintf("series e:%s m:test_duration=%s t:test_name=%s t:test_status=%s d:%s\n",
+        $row[1], $row[4], $row[2], $row[3], $seriesdate);
     $lineindex++;
 }
 
