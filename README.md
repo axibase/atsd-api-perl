@@ -69,7 +69,12 @@ date,node,test_name,test_status,test_duration
 * Commands Sent
 
 ```ls
-
+series e:axi-01 m:api-q-1=32 t:test_status=0 d:2017-05-15T22:00:00Z
+series e:axi-01 m:api-q-2=2050 t:test_status=0 d:2017-05-15T22:00:00Z
+series e:axi-01 m:api-q-4=120 t:test_status=0 d:2017-05-15T22:00:00Z
+series e:axi-01 m:api-q-1=32 t:test_status=0 d:2017-05-15T22:00:00Z
+series e:axi-01 m:api-q-2=2050 t:test_status=0 d:2017-05-15T22:00:00Z
+series e:axi-01 m:api-q-4=120 t:test_status=0 d:2017-05-15T22:00:00Z
 ```
 
 ### Sending Data using Data API
@@ -79,12 +84,82 @@ This example is similar to the initial example and illustrates how to read a CSV
 * Perl Script
 
 ```perl
+#!/usr/bin/perl
+use strict;
+use warnings FATAL => 'all';
+use Date::Parse;
+use Time::Piece;
+require LWP::UserAgent;
+require IO::Socket::SSL;
 
+my $num_args = $#ARGV + 1;
+if ($num_args != 2) {
+    print "\nUsage: https-series-uploader.pl url filename\n";
+    exit;
+}
+
+my $filename = $ARGV[1];
+open(my $fh, '<:encoding(UTF-8)', $filename)
+    or die "Could not open file '$filename' $!";
+
+# converting file into series commands
+my $separator = ',';
+my $lineindex = 0;
+my $commands = "";
+
+while (my $line = <$fh>) {
+    #skip header
+    if ($lineindex == 0) {
+        $lineindex++;
+        next;
+    }
+    chomp $line;
+    my @row = split($separator, $line);
+
+    my $seriestime = str2time($row[0]);
+    my $seriesdate = localtime($seriestime)->strftime('%Y-%m-%dT%H:%M:%SZ');
+
+    $commands = $commands . sprintf("series e:%s m:%s=%s t:test_status=%s d:%s\n",
+    $row[1], $row[2], $row[4], $row[3], $seriesdate);
+    $lineindex++;
+}
+
+# disable certificate verification
+$ENV{'PERL_LWP_SSL_VERIFY_HOSTNAME'} = 0;
+IO::Socket::SSL::set_ctx_defaults(
+    SSL_verifycn_scheme => 'www',
+    SSL_verify_mode => 0,
+);
+
+# send commands
+my $ua = LWP::UserAgent->new;
+$ua->timeout(10); # 10 seconds
+$ua->env_proxy;
+
+my $request = HTTP::Request->new(POST=>$ARGV[0] . '/api/v1/command');
+$request->content_type('text/plain');
+$request->content($commands);
+
+my $response = $ua->request($request);
+
+if (!$response->is_success) {
+    die $response->status_line;
+}
+
+if ($response->code != 200) {
+    die "Server returned error: " . $response->code;
+}
+
+if ($response->header('Content-Type') !~ 'application/json') {
+    die "Unexpected content type: " . $response->header('Content-Type');
+}
+
+print $response->decoded_content;
 ```
 
 * Usage
 
 ```bash
-
+perl script.pl https://user:password@localhost:8443 data.csv
 ```
 
