@@ -24,19 +24,79 @@ axi-01,api-q-4,0,120
 * Perl Script
 
 ```perl
+#!/usr/bin/perl
+use strict;
+use warnings FATAL => 'all';
+use warnings FATAL => 'all';
+use Date::Parse;
+use Time::Piece;
+use IO::Socket::INET;
 
+# auto-flush on socket
+$| = 1;
+
+my $num_args = $#ARGV + 1;
+if ($num_args != 3) {
+    print "\nUsage: series-uploader.pl host port filename\n";
+    exit;
+}
+
+my $filename = $ARGV[2];
+open(my $fh, '<:encoding(UTF-8)', $filename)
+    or die "Could not open file '$filename' $!";
+
+# converting file into series commands
+my $separator = ',';
+my $seriesdate = localtime(time())->strftime('%Y-%m-%dT%H:%M:%SZ');
+my $lineindex = 0;
+my $commands = "";
+
+while (my $line = <$fh>) {
+    #skip header
+    if ($lineindex == 0) {
+        $lineindex++;
+        next;
+    }
+    chomp $line;
+    my @row = split($separator, $line);
+
+    $commands = $commands . sprintf("series e:%s m:%s=%s t:test_status=%s d:%s\n",
+        $row[1], $row[2], $row[4], $row[3], $seriesdate);
+    $lineindex++;
+}
+
+# data to send to a server
+# create a connecting socket
+my $socket = new IO::Socket::INET (
+    PeerHost => $ARGV[0],
+    PeerPort => $ARGV[1],
+    Proto => 'tcp',
+);
+die "cannot connect to the server $ARGV[0]:$ARGV[1] $!\n" unless $socket;
+
+$socket->send($commands);
+
+# notify server that request has been sent
+shutdown($socket, 1);
+
+$socket->close();
 ```
 
 * Usage
 
 ```bash
-
+perl series-uploader.pl localhost 8081 data.csv
 ```
 
 * Commands Sent
 
 ```ls
-
+series e:axi-01 m:api-q-1=32 t:test_status=0 d:2017-05-17T17:45:09Z
+series e:axi-01 m:api-q-2=2050 t:test_status=0 d:2017-05-17T17:45:09Z
+series e:axi-01 m:api-q-4=120 t:test_status=0 d:2017-05-17T17:45:09Z
+series e:axi-01 m:api-q-1=32 t:test_status=0 d:2017-05-17T17:45:09Z
+series e:axi-01 m:api-q-2=2050 t:test_status=0 d:2017-05-17T17:45:09Z
+series e:axi-01 m:api-q-4=120 t:test_status=0 d:2017-05-17T17:45:09Z
 ```
 
 
@@ -57,13 +117,70 @@ date,node,test_name,test_status,test_duration
 * Perl Script
 
 ```perl
+#!/usr/bin/perl
+use strict;
+use warnings FATAL => 'all';
+use warnings FATAL => 'all';
+use Date::Parse;
+use Time::Piece;
+use IO::Socket::INET;
 
+# auto-flush on socket
+$| = 1;
+
+my $num_args = $#ARGV + 1;
+if ($num_args != 3) {
+    print "\nUsage: series-uploader.pl host port filename\n";
+    exit;
+}
+
+my $filename = $ARGV[2];
+open(my $fh, '<:encoding(UTF-8)', $filename)
+    or die "Could not open file '$filename' $!";
+
+# converting file into series commands
+my $separator = ',';
+my $lineindex = 0;
+my $commands = "";
+
+while (my $line = <$fh>) {
+    #skip header
+    if ($lineindex == 0) {
+        $lineindex++;
+        next;
+    }
+    chomp $line;
+    my @row = split($separator, $line);
+
+    my $seriestime = str2time($row[0]);
+    my $seriesdate = localtime($seriestime)->strftime('%Y-%m-%dT%H:%M:%SZ');
+
+    $commands = $commands . sprintf("series e:%s m:%s=%s t:test_status=%s d:%s\n",
+        $row[1], $row[2], $row[4], $row[3], $seriesdate);
+    $lineindex++;
+}
+
+# data to send to a server
+# create a connecting socket
+my $socket = new IO::Socket::INET (
+    PeerHost => $ARGV[0],
+    PeerPort => $ARGV[1],
+    Proto => 'tcp',
+);
+die "cannot connect to the server $ARGV[0]:$ARGV[1] $!\n" unless $socket;
+
+$socket->send($commands);
+
+# notify server that request has been sent
+shutdown($socket, 1);
+
+$socket->close();
 ```
 
 * Usage
 
 ```bash
-
+perl series-uploader.pl localhost 8081 data.csv
 ```
 
 * Commands Sent
@@ -160,6 +277,6 @@ print $response->decoded_content;
 * Usage
 
 ```bash
-perl script.pl https://user:password@localhost:8443 data.csv
+perl https-series-uploader.pl https://user:password@localhost:8443 data.csv
 ```
 
