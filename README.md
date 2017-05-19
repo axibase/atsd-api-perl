@@ -36,7 +36,6 @@ axi-01,api-q-4,0,120
 #!/usr/bin/perl
 use strict;
 use warnings FATAL => 'all';
-use Time::Piece;
 use IO::Socket::INET;
 
 my $num_args = $#ARGV + 1;
