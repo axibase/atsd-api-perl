@@ -51,23 +51,22 @@ open(my $fh, '<:encoding(UTF-8)', $filename)
 
 # converting file into series commands
 my $separator = ',';
-my $series_time_utc = gmtime(time());
-my $seriesdate = $series_time_utc->strftime('%Y-%m-%dT%H:%M:%SZ');
-my $lineindex = 0;
+my $current_time_unix_seconds = time();
+my $line_index = 0;
 my $commands = "";
 
 while (my $line = <$fh>) {
     #skip header
-    if ($lineindex == 0) {
-        $lineindex++;
+    if ($line_index== 0) {
+        $line_index++;
         next;
     }
     chomp $line;
     my @row = split($separator, $line);
 
-    $commands = $commands . sprintf("series e:%s t:test_name=%s m:test_status=%s m:test_duration=%s d:%s\n",
-        $row[0], $row[1], $row[2], $row[3], $seriesdate);
-    $lineindex++;
+    $commands = $commands . sprintf("series e:%s t:test_name=%s m:test_status=%s m:test_duration=%s s:%s\n",
+        $row[0], $row[1], $row[2], $row[3], $current_time_unix_seconds);
+    $line_index++;
 }
 
 print $commands;
@@ -98,9 +97,9 @@ perl series-uploader.pl localhost 8081 data.csv
 * Commands Sent
 
 ```ls
-series e:axi-01 t:test_name=api-q-1 m:test_status=0 m:test_duration=32 d:2017-05-19T09:47:04Z
-series e:axi-01 t:test_name=api-q-2 m:test_status=0 m:test_duration=2050 d:2017-05-19T09:47:04Z
-series e:axi-01 t:test_name=api-q-4 m:test_status=0 m:test_duration=120 d:2017-05-19T09:47:04Z
+series e:axi-01 t:test_name=api-q-1 m:test_status=0 m:test_duration=32 s:1495198062
+series e:axi-01 t:test_name=api-q-2 m:test_status=0 m:test_duration=2050 s:1495198062
+series e:axi-01 t:test_name=api-q-4 m:test_status=0 m:test_duration=120 s:1495198062
 ```
 
 
@@ -139,28 +138,28 @@ open(my $fh, '<:encoding(UTF-8)', $filename)
 
 # converting file into series commands
 my $separator = ',';
-my $dateformat = new DateTime::Format::Strptime(
+my $date_parser = new DateTime::Format::Strptime(
         pattern => '%Y-%m-%d %H:%M:%S',
         time_zone => 'US/Pacific',
     );
-my $lineindex = 0;
+my $line_index = 0;
 my $commands = "";
 
 while (my $line = <$fh>) {
     #skip header
-    if ($lineindex == 0) {
-        $lineindex++;
+    if ($line_index == 0) {
+        $line_index++;
         next;
     }
     chomp $line;
     my @row = split($separator, $line);
 
-    my $seriesdate =  $dateformat->parse_datetime($row[0]);
-    $seriesdate->set_time_zone('GMT');
+    my $series_date =  $date_parser->parse_datetime($row[0]);
+    $series_date->set_time_zone('GMT');
 
     $commands = $commands . sprintf("series e:%s t:test_name=%s m:test_status=%s m:test_duration=%s d:%s\n",
-        $row[1], $row[2], $row[3], $row[4], $seriesdate->strftime("%Y-%m-%dT%H:%M:%SZ"));
-    $lineindex++;
+        $row[1], $row[2], $row[3], $row[4], $series_date->strftime("%Y-%m-%dT%H:%M:%SZ"));
+    $line_index++;
 }
 
 print $commands;
@@ -225,28 +224,28 @@ open(my $fh, '<:encoding(UTF-8)', $filename)
 
 # converting file into series commands
 my $separator = ',';
-my $dateformat = new DateTime::Format::Strptime(
+my $date_parser = new DateTime::Format::Strptime(
         pattern => '%Y-%m-%d %H:%M:%S',
         time_zone => 'US/Pacific',
     );
-my $lineindex = 0;
+my $line_index = 0;
 my $commands = "";
 
 while (my $line = <$fh>) {
     #skip header
-    if ($lineindex == 0) {
-        $lineindex++;
+    if ($line_index == 0) {
+        $line_index++;
         next;
     }
     chomp $line;
     my @row = split($separator, $line);
 
-    my $seriesdate =  $dateformat->parse_datetime($row[0]);
-    $seriesdate->set_time_zone('GMT');
+    my $series_date =  $date_parser->parse_datetime($row[0]);
+    $series_date->set_time_zone('GMT');
 
     $commands = $commands . sprintf("series e:%s t:test_name=%s m:test_status=%s m:test_duration=%s d:%s\n",
-        $row[1], $row[2], $row[3], $row[4], $seriesdate->strftime("%Y-%m-%dT%H:%M:%SZ"));
-    $lineindex++;
+        $row[1], $row[2], $row[3], $row[4], $series_date->strftime("%Y-%m-%dT%H:%M:%SZ"));
+    $line_index++;
 }
 
 print $commands;
