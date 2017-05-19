@@ -27,6 +27,7 @@ axi-01,api-q-4,0,120
 #!/usr/bin/perl
 use strict;
 use warnings FATAL => 'all';
+use Time::Piece;
 use IO::Socket::INET;
 
 my $num_args = $#ARGV + 1;
@@ -41,7 +42,8 @@ open(my $fh, '<:encoding(UTF-8)', $filename)
 
 # converting file into series commands
 my $separator = ',';
-my $unix_seconds = time();
+my $series_time_utc = gmtime(time());
+my $seriesdate = $series_time_utc->strftime('%Y-%m-%dT%H:%M:%SZ');
 my $lineindex = 0;
 my $commands = "";
 
@@ -54,10 +56,12 @@ while (my $line = <$fh>) {
     chomp $line;
     my @row = split($separator, $line);
 
-    $commands = $commands . sprintf("series e:%s m:test_duration=%s t:test_name=%s t:test_status=%s s:%s\n",
-        $row[0], $row[3], $row[1], $row[2], $unix_seconds);
+    $commands = $commands . sprintf("series e:%s t:test_name=%s m:test_status=%s m:test_duration=%s d:%s\n",
+        $row[0], $row[1], $row[2], $row[3], $seriesdate);
     $lineindex++;
 }
+
+print $commands;
 
 # data to send to a server
 # create a connecting socket
@@ -85,9 +89,9 @@ perl series-uploader.pl localhost 8081 data.csv
 * Commands Sent
 
 ```ls
-series e:axi-01 m:test_duration=32 t:test_name=api-q-1 t:test_status=0 s:1495033767
-series e:axi-01 m:test_duration=2050 t:test_name=api-q-2 t:test_status=0 s:1495033767
-series e:axi-01 m:test_duration=120 t:test_name=api-q-4 t:test_status=0 s:1495033767
+series e:axi-01 t:test_name=api-q-1 m:test_status=0 m:test_duration=32 d:2017-05-19T09:47:04Z
+series e:axi-01 t:test_name=api-q-2 m:test_status=0 m:test_duration=2050 d:2017-05-19T09:47:04Z
+series e:axi-01 t:test_name=api-q-4 m:test_status=0 m:test_duration=120 d:2017-05-19T09:47:04Z
 ```
 
 
@@ -117,7 +121,7 @@ use IO::Socket::INET;
 
 my $num_args = $#ARGV + 1;
 if ($num_args != 3) {
-    print "\nUsage: series-uploader.pl host port filename\n";
+    print "\nUsage: series-date-uploader.pl host port filename\n";
     exit;
 }
 
@@ -139,12 +143,15 @@ while (my $line = <$fh>) {
     chomp $line;
     my @row = split($separator, $line);
 
-    my $seriesdate = gmtime(str2time($row[0]))->strftime('%Y-%m-%dT%H:%M:%SZ');
+    my $series_time_utc = gmtime(str2time($row[0], '-0800'));
+    my $seriesdate = $series_time_utc->strftime('%Y-%m-%dT%H:%M:%SZ');
 
-    $commands = $commands . sprintf("series e:%s m:test_duration=%s t:test_name=%s t:test_status=%s d:%s\n",
-        $row[1], $row[4], $row[2], $row[3], $seriesdate);
+    $commands = $commands . sprintf("series e:%s t:test_name=%s m:test_status=%s m:test_duration=%s d:%s\n",
+        $row[1], $row[2], $row[3], $row[4], $seriesdate);
     $lineindex++;
 }
+
+print $commands;
 
 # data to send to a server
 # create a connecting socket
@@ -166,18 +173,18 @@ $socket->close();
 * Usage
 
 ```bash
-perl series-uploader.pl localhost 8081 data.csv
+perl series-date-uploader.pl localhost 8081 data.csv
 ```
 
 * Commands Sent
 
 ```ls
-series e:axi-01 m:test_duration=32 t:test_name=api-q-1 t:test_status=0 d:2017-05-15T19:00:00Z
-series e:axi-01 m:test_duration=2050 t:test_name=api-q-2 t:test_status=0 d:2017-05-15T19:00:00Z
-series e:axi-01 m:test_duration=120 t:test_name=api-q-4 t:test_status=0 d:2017-05-15T19:00:00Z
-series e:axi-01 m:test_duration=32 t:test_name=api-q-1 t:test_status=0 d:2017-05-15T19:00:00Z
-series e:axi-01 m:test_duration=2050 t:test_name=api-q-2 t:test_status=0 d:2017-05-15T19:00:00Z
-series e:axi-01 m:test_duration=120 t:test_name=api-q-4 t:test_status=0 d:2017-05-15T19:00:00Z
+series e:axi-01 t:test_name=api-q-1 m:test_status=0 m:test_duration=32 d:2017-05-16T06:00:00Z
+series e:axi-01 t:test_name=api-q-2 m:test_status=0 m:test_duration=2050 d:2017-05-16T06:00:00Z
+series e:axi-01 t:test_name=api-q-4 m:test_status=0 m:test_duration=120 d:2017-05-16T06:00:00Z
+series e:axi-01 t:test_name=api-q-1 m:test_status=0 m:test_duration=28 d:2017-05-16T07:00:00Z
+series e:axi-01 t:test_name=api-q-2 m:test_status=0 m:test_duration=4000 d:2017-05-16T07:00:00Z
+series e:axi-01 t:test_name=api-q-4 m:test_status=0 m:test_duration=201 d:2017-05-16T07:00:00Z
 ```
 
 ### Sending Data using Data API
@@ -219,12 +226,15 @@ while (my $line = <$fh>) {
     chomp $line;
     my @row = split($separator, $line);
 
-    my $seriesdate = gmtime(str2time($row[0]))->strftime('%Y-%m-%dT%H:%M:%SZ');
+    my $series_time_utc = gmtime(str2time($row[0], '-0800'));
+    my $seriesdate = $series_time_utc->strftime('%Y-%m-%dT%H:%M:%SZ');
 
-    $commands = $commands . sprintf("series e:%s m:test_duration=%s t:test_name=%s t:test_status=%s d:%s\n",
-        $row[1], $row[4], $row[2], $row[3], $seriesdate);
+    $commands = $commands . sprintf("series e:%s t:test_name=%s m:test_status=%s m:test_duration=%s d:%s\n",
+        $row[1], $row[2], $row[3], $row[4], $seriesdate);
     $lineindex++;
 }
+
+print $commands;
 
 # disable certificate verification
 $ENV{'PERL_LWP_SSL_VERIFY_HOSTNAME'} = 0;
