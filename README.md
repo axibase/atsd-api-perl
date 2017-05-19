@@ -2,24 +2,27 @@
 
 ## Overview
 
-The project contains sample code to parse tabular files and insert data into [Axibase Time Series Database](https://axibase.com/products/axibase-time-series-database/). The examples will be used in the future to implement a full-featured API client for Perl.
+The project contains sample code to parse tabular files into [Axibase Time Series Database](https://axibase.com/products/axibase-time-series-database/) **series** commands which are then inserted into the target ATSD database via TCP and HTTP(s) protocols.
 
 ## Examples
 
 ### Prerequisites
 
-Scripts are using "DateTime::Format::Strptime" module so it should be installed.
+Some of the examples use Perl module "DateTime::Format::Strptime" to parse local timestamps.
+
+If the script contains `use DateTime::Format::Strptime;`  declaration, install the module as follows:
 
 ```bash
 sudo apt-get install cpanminus
+# sudo yum install cpanminus
 sudo cpanm DateTime::Format::Strptime
 ```
 
 ### Sending Data using Network API
 
-This examples illustrates how to read a CSV file, split its contents line by line, build a [series](https://github.com/axibase/atsd/blob/master/api/network/series.md#series-command) command and send it into ATSD over TCP.
+This example illustrates how to read a CSV file, split its contents line by line, build a [series](https://github.com/axibase/atsd/blob/master/api/network/series.md#series-command) command and send it into the target ATSD server over TCP.
 
-The data file contains the latest values for a set of tests which are timestamped at the time the scipt is invoked.
+The data file contains the latest values for a set of tests which are timestamped at the time the script is invoked.
 
 * Data File
 
@@ -29,6 +32,16 @@ axi-01,api-q-1,0,32
 axi-01,api-q-2,0,2050
 axi-01,api-q-4,0,120
 ```
+
+* Model
+
+| CSV Column | Command Field | Sample Value |
+|---|---|---:|
+| node | entity | axi-01 |
+| test_name | tag | api-q-1 |
+| test_status | metric | 0 |
+| test_duration | metric | 32 |
+| - | time (seconds) | 1495198062 |
 
 * Perl Script
 
@@ -50,8 +63,10 @@ open(my $fh, '<:encoding(UTF-8)', $filename)
 
 # converting file into series commands
 my $separator = ',';
+# all samples will be timestamped with the same time in UNIX seconds
 my $current_time_unix_seconds = time();
 my $line_index = 0;
+# an array of commands, separated by line feed
 my $commands = "";
 
 while (my $line = <$fh>) {
@@ -61,6 +76,7 @@ while (my $line = <$fh>) {
         next;
     }
     chomp $line;
+    # split the row into multiple tokens using comma as the separator
     my @row = split($separator, $line);
 
     $commands = $commands . sprintf("series e:%s t:test_name=%s m:test_status=%s m:test_duration=%s s:%s\n",
@@ -70,18 +86,18 @@ while (my $line = <$fh>) {
 
 print $commands;
 
-# data to send to a server
+# send commands to the ATSD server
 # create a connecting socket
 my $socket = new IO::Socket::INET (
     PeerHost => $ARGV[0],
     PeerPort => $ARGV[1],
     Proto => 'tcp',
 );
-die "cannot connect to the server $ARGV[0]:$ARGV[1] $!\n" unless $socket;
+die "cannot connect to the ATSD server $ARGV[0]:$ARGV[1] $!\n" unless $socket;
 
 $socket->send($commands);
 
-# notify server that request has been sent
+# flush the buffer and close the socket gracefully
 shutdown($socket, 1);
 
 $socket->close();
@@ -116,6 +132,16 @@ date,node,test_name,test_status,test_duration
 2017-05-15 23:00:00,axi-01,api-q-4,0,201
 ```
 
+* Model
+
+| CSV Column | Command Field | Sample Value |
+|---|---|---:|
+| node | entity | axi-01 |
+| test_name | tag | api-q-1 |
+| test_status | metric | 0 |
+| test_duration | metric | 32 |
+| date | time (iso) | 2017-05-16T05:00:00Z |
+
 * Perl Script
 
 ```perl
@@ -123,6 +149,7 @@ date,node,test_name,test_status,test_duration
 use strict;
 use warnings FATAL => 'all';
 use IO::Socket::INET;
+# make sure the module is installed
 use DateTime::Format::Strptime;
 
 my $num_args = $#ARGV + 1;
@@ -137,6 +164,7 @@ open(my $fh, '<:encoding(UTF-8)', $filename)
 
 # converting file into series commands
 my $separator = ',';
+# the parser will parser local dates contained in the CSV file in US/Pacific timezone
 my $date_parser = new DateTime::Format::Strptime(
         pattern => '%Y-%m-%d %H:%M:%S',
         time_zone => 'US/Pacific',
@@ -174,7 +202,7 @@ die "cannot connect to the server $ARGV[0]:$ARGV[1] $!\n" unless $socket;
 
 $socket->send($commands);
 
-# notify server that request has been sent
+# flush the buffer and close the socket gracefully
 shutdown($socket, 1);
 
 $socket->close();
@@ -199,7 +227,7 @@ series e:axi-01 t:test_name=api-q-4 m:test_status=0 m:test_duration=201 d:2017-0
 
 ### Sending Data using Data API
 
-This example is similar to the initial example and illustrates how to read a CSV file, split its contents line by line, build a batch of [series](https://github.com/axibase/atsd/blob/master/api/network/series.md#series-command) commands and upload them into ATSD over HTTP(s) using the Data API [command](https://github.com/axibase/atsd/blob/master/api/data/ext/command.md) method.
+This example is similar to the initial example and illustrates how to read a CSV file, split its contents line by line, build a batch of [series](https://github.com/axibase/atsd/blob/master/api/network/series.md#series-command) commands and upload them into the target ATSD server over HTTP(s) using the Data API [command](https://github.com/axibase/atsd/blob/master/api/data/ext/command.md) method.
 
 * Perl Script
 
@@ -207,6 +235,7 @@ This example is similar to the initial example and illustrates how to read a CSV
 #!/usr/bin/perl
 use strict;
 use warnings FATAL => 'all';
+# make sure the module is installed
 use DateTime::Format::Strptime;
 require LWP::UserAgent;
 require IO::Socket::SSL;
