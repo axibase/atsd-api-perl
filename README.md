@@ -1,28 +1,35 @@
-# Axibase Time Series Database Client for Perl
+# ATSD Perl Client
+
+![](./images/axibase-and-perl.png)
+
+## Table of Contents
+
+* [Overview](#overview)
+* [Examples](#examples)
 
 ## Overview
 
-The project contains sample code to parse tabular files into [Axibase Time Series Database](https://axibase.com/products/axibase-time-series-database/) **series** commands which are then inserted into the target ATSD database via TCP and HTTP(s) protocols.
+**ATSD Perl Client** enables Perl developers to parse tabular files into [Axibase Time Series Database](https://axibase.com/docs/atsd/) series commands, which can be inserted into a target ATSD instance via `TCP` and `HTTPS` protocols.
 
 ## Examples
 
 ### Prerequisites
 
-Some of the examples use Perl module "DateTime::Format::Strptime" to parse local timestamps.
+Some examples use Perl module [`DateTime::Format::Strptime`](https://metacpan.org/pod/DateTime::Format::Strptime) to parse local timestamps.
 
-If the script contains `use DateTime::Format::Strptime;`  declaration, install the module as follows:
+If a script contains the `use DateTime::Format::Strptime;`  declaration, install the module as follows:
 
-```bash
+```sh
 sudo apt-get install cpanminus
 # sudo yum install cpanminus
 sudo cpanm DateTime::Format::Strptime
 ```
 
-### Sending Data using Network API
+### Sending Data via [Network API](https://axibase.com/docs/atsd/api/network/)
 
-This example illustrates how to read a CSV file, split its contents line by line, build a [series](https://github.com/axibase/atsd/blob/master/api/network/series.md#series-command) command and send it into the target ATSD server over TCP.
+This example illustrates how to read a CSV file, split the contents line by line, build a [series command](https://axibase.com/docs/atsd/api/network/series.html) and send it into the target ATSD server via `TCP`.
 
-The data file contains the latest values for a set of tests which are timestamped at the time the script is invoked.
+The data file contains the latest values for a set of tests which are timestamped with the time of script invocation.
 
 * Data File
 
@@ -37,11 +44,11 @@ axi-01,api-q-4,0,120
 
 | CSV Column | Command Field | Sample Value |
 |---|---|---:|
-| node | entity | axi-01 |
-| test_name | tag | api-q-1 |
-| test_status | metric | 0 |
-| test_duration | metric | 32 |
-| - | time (seconds) | 1495198062 |
+| `node` | Entity | `axi-01` |
+| `test_name` | Tag | `api-q-1` |
+| `test_status` | Metric | `0` |
+| `test_duration` | Metric | `32` |
+| - | Time (seconds) | `1495198062` |
 
 * Perl Script
 
@@ -117,10 +124,9 @@ series e:axi-01 t:test_name=api-q-2 m:test_status=0 m:test_duration=2050 s:14951
 series e:axi-01 t:test_name=api-q-4 m:test_status=0 m:test_duration=120 s:1495198062
 ```
 
+### Sending Data via [Network API](https://axibase.com/docs/atsd/api/network/) (Data File with History)
 
-### Sending Data using Network API (Data File with History)
-
-This example is similar to the initial example except that each row in the data file contains a timestamp in the local time zone.
+Consider the above example with the additional component of each row in the data file containing a timestamp in the local time zone.
 
 ```ls
 date,node,test_name,test_status,test_duration
@@ -136,11 +142,11 @@ date,node,test_name,test_status,test_duration
 
 | CSV Column | Command Field | Sample Value |
 |---|---|---:|
-| node | entity | axi-01 |
-| test_name | tag | api-q-1 |
-| test_status | metric | 0 |
-| test_duration | metric | 32 |
-| date | time (iso) | 2017-05-16T05:00:00Z |
+| `node` | Entity | `axi-01` |
+| `test_name` | Tag | `api-q-1` |
+| `test_status` | Metric | `0` |
+| `test_duration` | Metric | `32` |
+| `date` | Time ([ISO 8601](https://axibase.com/docs/atsd/shared/date-format.html)) | `2017-05-16T05:00:00Z` |
 
 * Perl Script
 
@@ -225,9 +231,9 @@ series e:axi-01 t:test_name=api-q-2 m:test_status=0 m:test_duration=4000 d:2017-
 series e:axi-01 t:test_name=api-q-4 m:test_status=0 m:test_duration=201 d:2017-05-16T06:00:00Z
 ```
 
-### Sending Data using Data API
+### Sending Data via [REST API](https://axibase.com/docs/atsd/api/data/)
 
-This example is similar to the initial example and illustrates how to read a CSV file, split its contents line by line, build a batch of [series](https://github.com/axibase/atsd/blob/master/api/network/series.md#series-command) commands and upload them into the target ATSD server over HTTP(s) using the Data API [command](https://github.com/axibase/atsd/blob/master/api/data/ext/command.md) method.
+This example illustrates how to read a CSV file, split the contents line by line, build a [series command](https://axibase.com/docs/atsd/api/network/series.html) and send it into the target ATSD server via `HTTPS` using the Data API [`command` method](https://axibase.com/docs/atsd/api/data/ext/command.html).
 
 * Perl Script
 
@@ -316,4 +322,3 @@ print $response->decoded_content;
 ```bash
 perl https-series-uploader.pl https://user:password@localhost:8443 data.csv
 ```
-
