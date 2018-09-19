@@ -9,7 +9,7 @@
 
 ## Overview
 
-**ATSD Perl Client** enables Perl developers to parse tabular files into [Axibase Time Series Database](https://axibase.com/docs/atsd/) series commands, which can be inserted into a target ATSD instance via `TCP` and `HTTPS` protocols.
+**ATSD Perl Client** enables Perl developers to convert CSV/TSV files to [Axibase Time Series Database](https://axibase.com/docs/atsd/) series commands, which can be inserted into a target ATSD instance via `TCP` and `HTTPS` protocols.
 
 ## Examples
 
